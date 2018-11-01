@@ -1,0 +1,9 @@
+path_parameters:
+  "/v1/users/{id}":
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1

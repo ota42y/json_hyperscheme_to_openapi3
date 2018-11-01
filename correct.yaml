@@ -1,0 +1,177 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: ota42y blog
+servers:
+- url: https://ota42y.com/blog
+paths:
+  "/v1/posts":
+    summary: v1 posts
+    description: v1 Post REST API
+    get:
+      responses:
+        '200':
+          description: correct
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    "$ref": "#/components/parameters/v1_posts__cursor"
+                  data:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/post/properties/post"
+                required:
+                - cursor
+                - data
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          "$ref": "#/components/parameters/v1_posts__cursor"
+      - name: limit
+        in: query
+        schema:
+          description: id
+          type: integer
+      summary: index posts
+      description: index posts
+    post:
+      responses:
+        '200':
+          description: correct
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/post/properties/post"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  "$ref": "#/components/schemas/post/properties/title"
+              required:
+              - title
+      summary: create posts
+      description: create posts
+  "/v1/posts/search":
+    summary: v1 posts
+    description: v1 Post REST API
+    get:
+      responses:
+        '200':
+          description: correct
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    "$ref": "#/components/parameters/v1_posts__cursor"
+                  data:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/post/properties/post"
+                required:
+                - cursor
+                - data
+      parameters:
+      - name: keyword
+        in: query
+        schema:
+          description: search keyword
+          type: string
+        required: true
+      - name: cursor
+        in: query
+        schema:
+          "$ref": "#/components/parameters/v1_posts__cursor"
+      - name: limit
+        in: query
+        schema:
+          description: id
+          type: integer
+      summary: search posts
+      description: search posts
+  "/v1/users/{id}":
+    summary: users api
+    description: User
+    get:
+      responses:
+        '200':
+          description: correct
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/user/properties/user"
+      summary: user data
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+components:
+  parameters:
+    v1_posts__cursor:
+      name: cursor
+      in: query
+      schema:
+        "$ref": "#/components/parameters/v1_posts__cursor_id"
+    v1_posts__cursor_id:
+      name: cursor_id
+      in: query
+      schema:
+        nullable: true
+        description: id
+        type: integer
+  schemas:
+    user_id:
+      description: user_id
+      type: integer
+    datetime:
+      description: datetime
+      type: string
+    uuid:
+      description: uuid
+      type: string
+    user:
+      type: object
+      properties:
+        first_name:
+          description: honoka
+          type: string
+        user:
+          type: object
+          properties:
+            first_name:
+              "$ref": "#/components/schemas/user/properties/first_name"
+            last_name:
+              description: kousaka
+              type: string
+          required:
+          - first_name
+          - last_name
+      description: user data
+    post:
+      type: object
+      properties:
+        title:
+          description: otonokizaka haikou
+          type: string
+        post:
+          type: object
+          properties:
+            title:
+              "$ref": "#/components/schemas/post/properties/title"
+            author:
+              "$ref": "#/components/schemas/user/properties/user"
+          required:
+          - title
+      description: post

@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-04/hyper-schema",
+  "type": [
+    "object"
+  ],
+  "definitions": {
+    "user_id": {
+      "description": "user_id",
+      "type": "integer",
+      "example": 42
+    },
+    "datetime": {
+      "description": "datetime",
+      "type": "string",
+      "format": "date-time"
+    },
+    "uuid": {
+      "description": "uuid",
+      "type": "string",
+      "example": "UUIDABCDEFG"
+    },
+    "v1_posts": {
+      "$schema": "http://json-schema.org/draft-04/hyper-schema",
+      "title": "v1 posts",
+      "description": "v1 Post REST API",
+      "stability": "prototype",
+      "strictProperties": true,
+      "type": [
+        "object"
+      ],
+      "definitions": {
+        "cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/v1_posts/definitions/cursor_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cursor_id": {
+          "description": "id",
+          "type": "integer",
+          "example": 20
+        }
+      },
+      "links": [
+        {
+          "title": "index posts",
+          "description": "index posts",
+          "href": "/v1/posts",
+          "method": "GET",
+          "rel": "self",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "$ref": "#/definitions/v1_posts/definitions/cursor"
+              },
+              "limit": {
+                "description": "id",
+                "type": "integer",
+                "example": 10
+              }
+            }
+          },
+          "targetSchema": {
+            "type": "object",
+            "required": [
+              "cursor",
+              "data"
+            ],
+            "properties": {
+              "cursor": {
+                "$ref": "#/definitions/v1_posts/definitions/cursor"
+              },
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/post/definitions/post"
+                }
+              }
+            }
+          }
+        },
+        {
+          "title": "create posts",
+          "description": "create posts",
+          "href": "/v1/posts",
+          "method": "POST",
+          "rel": "self",
+          "schema": {
+            "type": "object",
+            "required": [
+              "title"
+            ],
+            "properties": {
+              "title": {
+                "$ref": "#/definitions/post/definitions/title"
+              }
+            }
+          },
+          "targetSchema": {
+            "$ref": "#/definitions/post/definitions/post"
+          }
+        },
+        {
+          "title": "search posts",
+          "description": "search posts",
+          "href": "/v1/posts/search",
+          "method": "GET",
+          "rel": "self",
+          "schema": {
+            "type": "object",
+            "required": [
+              "keyword"
+            ],
+            "properties": {
+              "keyword": {
+                "description": "search keyword",
+                "type": "string",
+                "example": "honoka"
+              },
+              "cursor": {
+                "$ref": "#/definitions/v1_posts/definitions/cursor"
+              },
+              "limit": {
+                "description": "id",
+                "type": "integer",
+                "example": 20
+              }
+            }
+          },
+          "targetSchema": {
+            "type": "object",
+            "required": [
+              "cursor",
+              "data"
+            ],
+            "properties": {
+              "cursor": {
+                "$ref": "#/definitions/v1_posts/definitions/cursor"
+              },
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/post/definitions/post"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "v1_users": {
+      "$schema": "http://json-schema.org/draft-04/hyper-schema",
+      "title": "users api",
+      "description": "User",
+      "stability": "prototype",
+      "strictProperties": true,
+      "type": [
+        "object"
+      ],
+      "links": [
+        {
+          "title": "user data",
+          "description": null,
+          "href": "/v1/users/{id}",
+          "method": "GET",
+          "rel": "self",
+          "targetSchema": {
+            "$ref": "#/definitions/user/definitions/user"
+          }
+        }
+      ]
+    },
+    "user": {
+      "$schema": "http://json-schema.org/draft-04/hyper-schema",
+      "title": "User object",
+      "description": "user data",
+      "stability": "prototype",
+      "strictProperties": true,
+      "type": [
+        "object"
+      ],
+      "definitions": {
+        "first_name": {
+          "description": "honoka",
+          "type": "string"
+        },
+        "user": {
+          "type": "object",
+          "required": [
+            "first_name",
+            "last_name"
+          ],
+          "properties": {
+            "first_name": {
+              "$ref": "#/definitions/user/definitions/first_name"
+            },
+            "last_name": {
+              "description": "kousaka",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "post": {
+      "$schema": "http://json-schema.org/draft-04/hyper-schema",
+      "title": "post data",
+      "description": "post",
+      "stability": "prototype",
+      "strictProperties": true,
+      "type": [
+        "object"
+      ],
+      "definitions": {
+        "title": {
+          "description": "otonokizaka haikou",
+          "type": "string"
+        },
+        "post": {
+          "type": "object",
+          "required": [
+            "title"
+          ],
+          "properties": {
+            "title": {
+              "$ref": "#/definitions/post/definitions/title"
+            },
+            "author": {
+              "$ref": "#/definitions/user/definitions/user"
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "v1_posts": {
+      "$ref": "#/definitions/v1_posts"
+    },
+    "v1_users": {
+      "$ref": "#/definitions/v1_users"
+    },
+    "post": {
+      "$ref": "#/definitions/post"
+    },
+    "user": {
+      "$ref": "#/definitions/user"
+    }
+  },
+  "description": "my blog",
+  "id": "ota42y_blog",
+  "links": [
+    {
+      "href": "https://ota42y.com/blog",
+      "rel": "self"
+    }
+  ],
+  "title": "ota42y blog"
+}
