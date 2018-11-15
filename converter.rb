@@ -303,27 +303,22 @@ class AnyofObject < SchemaBase
   end
 
   def change_nullable
-    null_data = schema.any_of.select{ |s| s.type == ['null'] }
-    if null_data
-      @references = schema.any_of.map do |ref|
-        next nil if ref.type == ['null']
+    @references = schema.any_of.map do |ref|
+      next nil if ref.type == ['null']
 
-        obj = SchemaObjectBuilder.new(ref).build!
+      obj = SchemaObjectBuilder.new(ref).build!
 
-        if obj.is_a?(ReferenceObject)
-          correct_ref = GLOBAL_STORE.pointer_to_ref[ref.reference.pointer]
-          ref_object = GLOBAL_STORE.ref_to_obj[correct_ref]
-          ref_object.nullable! if ref_object
-        else
-          obj.nullable!
-        end
+      if obj.is_a?(ReferenceObject)
+        correct_ref = GLOBAL_STORE.pointer_to_ref[ref.reference.pointer]
+        ref_object = GLOBAL_STORE.ref_to_obj[correct_ref]
+        ref_object.nullable! if ref_object
+      else
+        obj.nullable!
+      end
 
 
-        obj
-      end.compact
-    else
-      raise 'not support object or null anyof data :('
-    end
+      obj
+    end.compact
   end
 
   def register_pointer(parent_ref)
@@ -342,7 +337,8 @@ class NormalObject < SchemaBase
   end
 
   def object_type
-    (schema.type.size == 1 ? schema.type.first : schema.type)
+    types = schema.type.reject{|t| t == "null"}
+    types.first # OpenAPI3 didin't support multi type (but Hype-Schema support)
   end
 
   def register_pointer(parent_ref)
@@ -438,8 +434,12 @@ class SchemaObjectBuilder
     return 'paths' if has_link?
     return 'reference' if schema.reference
     return 'any_of' unless schema.any_of.empty?
-    raise "un support multi type #{@schema}" if @schema.type.size == 2
+    raise "OpenAPI3 unsupport multi type #{@schema.inspect}" if @schema.type.reject{|t| t == "null"}.size == 2 
     @schema.type.first
+  end
+
+  def nullable_type?
+    @schema.type.include?("null")
   end
 
   def build!
@@ -449,13 +449,17 @@ class SchemaObjectBuilder
     when 'any_of'
       build_any_of
     when 'object'
-      JsonSchemaObject.new(schema)
+      obj = JsonSchemaObject.new(schema)
+      obj.nullable! if nullable_type?
+      obj
     when 'reference'
       ReferenceObject.new(schema)
     when 'array'
       ArrayObject.new(schema)
     else
-      NormalObject.new(schema)
+      n = NormalObject.new(schema)
+      n.nullable! if nullable_type?
+      n
     end
   end
 
