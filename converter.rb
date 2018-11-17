@@ -333,6 +333,7 @@ class NormalObject < SchemaBase
         description:schema.description,
         type: object_type,
         example: schema.default,
+        enum: schema.enum,
     }).reject{ |_k, v| v.nil?}
   end
 

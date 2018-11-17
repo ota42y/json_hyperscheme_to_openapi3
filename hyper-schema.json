@@ -120,7 +120,11 @@
               "keyword": {
                 "description": "search keyword",
                 "type": "string",
-                "example": "honoka"
+                "example": "honoka",
+                "enum": [
+                  "honoka",
+                  "mari"
+                ]
               },
               "cursor": {
                 "$ref": "#/definitions/v1_posts/definitions/cursor"

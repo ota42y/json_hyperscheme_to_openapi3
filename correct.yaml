@@ -85,6 +85,9 @@ paths:
         schema:
           description: search keyword
           type: string
+          enum:
+            - honoka
+            - mari
         required: true
       - name: cursor
         in: query
