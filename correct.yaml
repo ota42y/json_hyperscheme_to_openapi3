@@ -27,10 +27,7 @@ paths:
                 - cursor
                 - data
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          "$ref": "#/components/parameters/v1_posts__cursor"
+      - "$ref": "#/components/parameters/v1_posts__cursor"
       - name: limit
         in: query
         schema:
@@ -89,10 +86,7 @@ paths:
             - honoka
             - mari
         required: true
-      - name: cursor
-        in: query
-        schema:
-          "$ref": "#/components/parameters/v1_posts__cursor"
+      - "$ref": "#/components/parameters/v1_posts__cursor"
       - name: limit
         in: query
         schema:

@@ -40,7 +40,9 @@ class GlobalStore
   end
 
   def add_parameters(pointer, value)
+    key = convert_pointer_to_key(pointer)
     @parameters[convert_pointer_to_key(pointer)] = value
+    key
   end
 
   def convert_pointer_to_key(pointer)
@@ -199,7 +201,13 @@ class MethodObject < SchemaBase
 
     if schema.schema && parameter_request?
       required = schema.schema.required.nil? ? Set.new : schema.schema.required.to_set
-      @parameters = schema.schema.properties.map { |k, v| ParameterObject.new(k, required.include?(k), v, 'query') }
+      @parameters = schema.schema.properties.map do |k, v|
+        if v.reference.nil?
+          ParameterObject.new(k, required.include?(k), v, 'query')
+        else
+          ReferenceObject.new(v)
+        end
+      end
     else
       @parameters = []
     end
