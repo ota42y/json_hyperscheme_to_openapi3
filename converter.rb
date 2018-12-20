@@ -112,6 +112,15 @@ class SchemaBase
   def children
     []
   end
+
+  def parameter_schema(s)
+    if s.is_a?(ReferenceObject)
+      s.to_openap3_parameter_schema
+    else
+      s.to_openapi3
+    end
+  end
+
 end
 
 class ResponseObject < SchemaBase
@@ -124,7 +133,7 @@ class ResponseObject < SchemaBase
         description: 'correct',
         content: {
             'application/json': {
-                schema: @response_schema.to_openapi3,
+                schema: parameter_schema(@response_schema),
             }
         },
     },)
@@ -382,7 +391,7 @@ class JsonSchemaObject < SchemaBase
   def to_openapi3
     ret = super.merge({type: 'object'})
 
-    ret.merge!(properties: properties.transform_values(&:to_openapi3)) unless properties.empty?
+    ret.merge!(properties: properties.transform_values{ |v| parameter_schema(v) }) unless properties.empty?
     (d = required) ? ret.merge!(required: d) : nil
     ret.merge!(description: schema.description) if schema.description
 
@@ -402,9 +411,21 @@ end
 
 class ReferenceObject < SchemaBase
   def to_openapi3
-    correct_ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
-    if correct_ref
-      {'$ref': correct_ref,}
+    convert_openapi3(GLOBAL_STORE.pointer_to_ref[schema.reference.pointer])
+  end
+
+  # when reference point to parameter object and need parameter.schema, convert it
+  def to_openap3_parameter_schema
+    ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
+    if ref.start_with?('#/components/parameters/')
+      ref = ref + '/schema'
+    end
+    convert_openapi3(ref)
+  end
+
+  def convert_openapi3(reference)
+    if reference
+      {'$ref': reference}
     else
       {'$error_ref': schema.reference.pointer,}
     end
@@ -424,7 +445,7 @@ class ArrayObject < SchemaBase
   def to_openapi3
     super.merge({
         type: 'array',
-        items: @items.to_openapi3
+        items: parameter_schema(@items)
     })
   end
 end
