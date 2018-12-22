@@ -4,7 +4,7 @@ json_save_path = 'output.json'
 other_data_path = 'other_data.yml'
 correct_data_path = 'correct.yaml'
 
-check_correct_data = true
+check_correct_data = false
 
 require 'json'
 require 'yaml'
@@ -163,10 +163,12 @@ class ParameterObject < SchemaBase
   end
 
   def to_openapi3
+    s = @schema_object.respond_to?(:to_openap3_parameter_schema) ? @schema_object.to_openap3_parameter_schema : @schema_object.to_openapi3
+
     d = super.merge({
           name: name,
           in: @in_param,
-          schema: @schema_object.to_openapi3
+          schema: s
     })
     d.merge!(required: true) if @required
     d
@@ -197,10 +199,59 @@ class ParametersObject < SchemaBase
   end
 end
 
+class ReferenceObject < SchemaBase
+  def to_openapi3
+    convert_openapi3(GLOBAL_STORE.pointer_to_ref[schema.reference.pointer])
+  end
+
+  # when reference point to parameter object and need parameter.schema, convert it
+  def to_openap3_parameter_schema
+    ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
+    if ref.start_with?('#/components/parameters/')
+      ref = ref + '/schema'
+    end
+    convert_openapi3(ref)
+  end
+
+  def convert_openapi3(reference)
+    if reference
+      {'$ref': reference}
+    else
+      {'$error_ref': schema.reference.pointer,}
+    end
+  end
+
+  def register_pointer(parent_ref)
+    register_ref = parent_ref.chomp('/') + '/' + File.basename(schema.pointer)
+    GLOBAL_STORE.register_pointer(schema.pointer, register_ref, self)
+  end
+end
+
+class ParameterReferenceObject < ReferenceObject
+  def initialize(parameter_name, schema)
+    super(schema)
+    @parameter_name = parameter_name
+  end
+
+  def to_openapi3
+    # we move to all definitions to schemas so we can't use it as parameter.
+    # (Json Hyper-Schema don't divide schema and parameter but OpenAPI3 divide)
+    # so we create new parameter
+    ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
+    return super unless ref.start_with?('#/components/schemas')
+    {
+        name: @parameter_name,
+        in: 'query',
+        schema: convert_openapi3(ref)
+    }
+  end
+end
+
 class MethodObject < SchemaBase
   def build
     raise "nil targetSchema in #{schema}, #{schema.pointer}" unless schema.target_schema
     @responses = [ ResponseObject.new(schema.target_schema) ]
+    @parameters_reference_pointer = nil
 
     if schema.schema && !parameter_request?
       @request_body_schema = SchemaObjectBuilder.new(schema.schema).build!
@@ -209,20 +260,27 @@ class MethodObject < SchemaBase
     end
 
     if schema.schema && parameter_request?
-      required = schema.schema.required.nil? ? Set.new : schema.schema.required.to_set
-      @parameters = schema.schema.properties.map do |k, v|
-        if v.reference.nil?
-          ParameterObject.new(k, required.include?(k), v, 'query')
-        else
-          ReferenceObject.new(v)
-        end
-      end
+      @parameters = build_parameters(schema.schema)
+
+      # check reference
+      @parameters_reference_pointer = schema.schema.reference&.pointer
     else
       @parameters = []
     end
   end
 
-  attr_accessor :description, :summary, :responses, :parameters
+  def build_parameters(s)
+    required = s.required.nil? ? Set.new : s.required.to_set
+    s.properties.map do |k, v|
+      if v.reference.nil?
+        ParameterObject.new(k, required.include?(k), v, 'query')
+      else
+        ParameterReferenceObject.new(k, v)
+      end
+    end
+  end
+
+  attr_accessor :description, :summary, :responses
 
   def parameter_request?
     http_method == :get || http_method == :delete
@@ -238,11 +296,23 @@ class MethodObject < SchemaBase
     {
         content: {
             'application/json': {
-                schema: @request_body_schema.to_openapi3,
+                schema: parameter_schema(@request_body_schema)
             }
         }
-
     }
+  end
+
+  def parameters
+    return @parameters unless @parameters.empty?
+    return [] unless @parameters_reference_pointer
+
+    # build parameters from reference schema
+    # because JSON HyperSchema allow parameters as schema, but OpenAPI3 require as schema object
+    ref = GLOBAL_STORE.pointer_to_ref[@parameters_reference_pointer]
+    obj = GLOBAL_STORE.ref_to_obj[ref]
+    s = obj.schema
+    @parameters = build_parameters(s)
+    return @parameters
   end
 
   def to_openapi3
@@ -310,8 +380,20 @@ end
 
 class AnyofObject < SchemaBase
   def to_openapi3
+    convert_openapi3(false)
+  end
+
+  def to_openap3_parameter_schema
+    convert_openapi3(true)
+  end
+
+  def convert_openapi3(parameter_schema)
     if @references.size == 1
-      @references.first.to_openapi3
+      if parameter_schema && @references.first.respond_to?(:to_openap3_parameter_schema)
+        @references.first.to_openap3_parameter_schema
+      else
+        @references.first.to_openapi3
+      end
     else
       {
           anyOf: @references.map(&:to_openapi3)
@@ -349,6 +431,7 @@ class NormalObject < SchemaBase
     super.merge({
         description:schema.description,
         type: object_type,
+        format: schema.format,
         example: schema.default,
         enum: schema.enum,
     }).reject{ |_k, v| v.nil?}
@@ -406,34 +489,6 @@ class JsonSchemaObject < SchemaBase
     properties.values.each do |child|
       child.register_pointer(child_ref)
     end
-  end
-end
-
-class ReferenceObject < SchemaBase
-  def to_openapi3
-    convert_openapi3(GLOBAL_STORE.pointer_to_ref[schema.reference.pointer])
-  end
-
-  # when reference point to parameter object and need parameter.schema, convert it
-  def to_openap3_parameter_schema
-    ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
-    if ref.start_with?('#/components/parameters/')
-      ref = ref + '/schema'
-    end
-    convert_openapi3(ref)
-  end
-
-  def convert_openapi3(reference)
-    if reference
-      {'$ref': reference}
-    else
-      {'$error_ref': schema.reference.pointer,}
-    end
-  end
-
-  def register_pointer(parent_ref)
-    register_ref = parent_ref.chomp('/') + '/' + File.basename(schema.pointer)
-    GLOBAL_STORE.register_pointer(schema.pointer, register_ref, self)
   end
 end
 
