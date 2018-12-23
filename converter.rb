@@ -114,7 +114,7 @@ class SchemaBase
   end
 
   def parameter_schema(s)
-    if s.is_a?(ReferenceObject)
+    if s.respond_to?(:to_openap3_parameter_schema)
       s.to_openap3_parameter_schema
     else
       s.to_openapi3
@@ -163,12 +163,10 @@ class ParameterObject < SchemaBase
   end
 
   def to_openapi3
-    s = @schema_object.respond_to?(:to_openap3_parameter_schema) ? @schema_object.to_openap3_parameter_schema : @schema_object.to_openapi3
-
     d = super.merge({
           name: name,
           in: @in_param,
-          schema: s
+          schema: parameter_schema(@schema_object)
     })
     d.merge!(required: true) if @required
     d
