@@ -226,9 +226,10 @@ class ReferenceObject < SchemaBase
 end
 
 class ParameterReferenceObject < ReferenceObject
-  def initialize(parameter_name, schema)
+  def initialize(parameter_name, required, schema)
     super(schema)
     @parameter_name = parameter_name
+    @required = required
   end
 
   def to_openapi3
@@ -237,11 +238,15 @@ class ParameterReferenceObject < ReferenceObject
     # so we create new parameter
     ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
     return super unless ref.start_with?('#/components/schemas')
-    {
+
+    d = {
         name: @parameter_name,
         in: 'query',
         schema: convert_openapi3(ref)
     }
+
+    d.merge!(required: true) if @required
+    d
   end
 end
 
@@ -273,7 +278,7 @@ class MethodObject < SchemaBase
       if v.reference.nil?
         ParameterObject.new(k, required.include?(k), v, 'query')
       else
-        ParameterReferenceObject.new(k, v)
+        ParameterReferenceObject.new(k, required.include?(k), v)
       end
     end
   end
