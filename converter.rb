@@ -205,6 +205,7 @@ class ReferenceObject < SchemaBase
   # when reference point to parameter object and need parameter.schema, convert it
   def to_openap3_parameter_schema
     ref = GLOBAL_STORE.pointer_to_ref[schema.reference.pointer]
+
     if ref.start_with?('#/components/parameters/')
       ref = ref + '/schema'
     end
@@ -505,6 +506,14 @@ class ArrayObject < SchemaBase
         type: 'array',
         items: parameter_schema(@items)
     })
+  end
+
+  def register_pointer(parent_ref)
+    register_ref = parent_ref.chomp('/') + '/' + File.basename(schema.pointer)
+    GLOBAL_STORE.register_pointer(schema.pointer, register_ref, self)
+
+    child_ref = register_ref + "/items"
+    @items.register_pointer(child_ref)
   end
 end
 
